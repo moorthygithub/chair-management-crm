@@ -1,30 +1,21 @@
-import Cookies from "js-cookie";
+import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 
 const useAuth = () => {
-  const [authData, setAuthData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  
+  const token = useSelector((state) => state.auth?.token);
+  const user = useSelector((state) => state.auth?.user);
+
   useEffect(() => {
-    const token = Cookies.get("token");
-    const userData = {
-      id: Cookies.get("id"),
-      name: Cookies.get("name"),
-      userType: Cookies.get("user_type_id"),
-      email: Cookies.get("email"),
-    };
-
-    if (token) {
-      setAuthData({ user: userData });
-    } else {
-      setAuthData({ user: null });
-    }
-
     setIsLoading(false);
   }, []);
 
-  return { data: authData, isLoading };
+  return {
+    isLoading,
+    isAuthenticated: Boolean(token),
+    user,
+  };
 };
 
 export default useAuth;

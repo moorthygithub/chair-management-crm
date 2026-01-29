@@ -1,26 +1,22 @@
-import { useNavigate } from "react-router-dom";
-
-import SessionTimeoutTracker from "./components/session-timeout-tracker/session-timeout-tracker";
-
-import Cookies from "js-cookie";
+import { useSelector } from "react-redux";
 import { Toaster } from "sonner";
 import ScrollToTop from "./components/common/scroll-to-top";
+import SessionTimeoutTracker from "./components/session-timeout-tracker/session-timeout-tracker";
 import AppRoutes from "./routes/app-routes";
-import { appLogout } from "./utils/logout";
+import useAppLogout from "./utils/logout";
+
 
 function App() {
-  const navigate = useNavigate();
-  const time = Cookies.get("token-expire-time");
-  const handleLogout = () => {
-    appLogout();
-    navigate("/");
-  };
+  const time = useSelector((state) => state.auth.tokenExpireAt);
+  const handleLogout = useAppLogout();
+
   return (
     <>
       {/* <DisabledRightClick /> */}
       <Toaster richColors position="top-right" />
       <ScrollToTop />
       <SessionTimeoutTracker expiryTime={time} onLogout={handleLogout} />
+     
       <AppRoutes />
     </>
   );

@@ -1,1 +1,0 @@
-# chair-management-crm
