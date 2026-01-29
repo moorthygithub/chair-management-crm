@@ -1,8 +1,5 @@
-
-
-import { useEffect, useState } from 'react';
-import './top-loading-bar.css'; 
-
+import { useEffect, useState } from "react";
+import "./top-loading-bar.css";
 
 const LoadingBar = () => {
   const [progress, setProgress] = useState(0);
@@ -22,9 +19,7 @@ const LoadingBar = () => {
   }, []);
 
   return (
-
-       <div className="top-loading-bar" style={{ width: `${progress}%` }}></div>
-
+    <div className="top-loading-bar" style={{ width: `${progress}%` }}></div>
   );
 };
 

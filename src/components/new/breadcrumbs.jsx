@@ -1,11 +1,9 @@
+import { ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { ChevronRight, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export function Breadcrumbs({ onBack }) {
   const location = useLocation();
   const pathnames = location.pathname.split("/").filter((x) => x);
-
 
   const visiblePathnames = pathnames.slice(0, 2);
 
@@ -15,7 +13,6 @@ export function Breadcrumbs({ onBack }) {
         onClick={onBack}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        {/* <ArrowLeft className="h-4 w-4" /> */}
         <span>Back</span>
       </button>
 
@@ -30,20 +27,12 @@ export function Breadcrumbs({ onBack }) {
               return (
                 <div key={name} className="flex items-center">
                   {index === 0 ? (
-                    <Link
-                      // to={routeTo}
-                      className="text-muted-foreground hover:text-foreground capitalize"
-                    >
+                    <Link className="text-muted-foreground hover:text-foreground capitalize">
                       {name.replace(/-/g, " ")}
                     </Link>
                   ) : (
-                    <span className="font-medium text-foreground capitalize">
-                      {/* {name.replace(/-/g, " ")} */}
-                    </span>
+                    <span className="font-medium text-foreground capitalize"></span>
                   )}
-                  {/* {!isLast && (
-                    <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
-                  )} */}
                 </div>
               );
             })}

@@ -1,17 +1,14 @@
-import Page from "@/app/dashboard/page";
+import Page from "@/app/layout/page";
 import DashboardSkeleton from "@/components/skeleton-loader/dashboard-skeleton";
 import useAuth from "@/hooks/api/use-auth";
 import { Navigate, Outlet } from "react-router-dom";
 
 const ProtectedRoute = () => {
-  const { data: authData, isLoading } = useAuth();
-  const user = authData?.user;
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return <DashboardSkeleton />;
-  }
+  if (isLoading) return <DashboardSkeleton />;
 
-  return user ? (
+  return isAuthenticated ? (
     <Page>
       <Outlet />
     </Page>

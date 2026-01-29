@@ -1,195 +1,243 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { useTheme } from "@/lib/theme-context";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useSelector } from "react-redux";
 import { toast } from "sonner";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-import BASE_URL from "@/config/base-url";
-import Cookies from "js-cookie";
-
-import DocSetting from "@/components/settings/doc-setting";
-import ProfileSetting from "@/components/settings/profile-setting";
-
 const Settings = () => {
+  const { theme, setTheme } = useTheme();
+  const user = useSelector((state) => state.auth.user);
+  const { trigger, loading: isSubmitting } = useApiMutation();
 
-  const queryClient = useQueryClient();
-  const token = Cookies.get("token");
-  const fileInputRef = useRef(null);
-
-  const { data: profileData, isLoading } = useQuery({
-    queryKey: ["profile"],
-    queryFn: async () => {
-      const response = await axios.get(`${BASE_URL}/api/fetch-profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-    staleTime: 30 * 60 * 1000,
-    cacheTime: 60 * 60 * 1000, 
-    refetchOnMount: false, 
-    refetchOnWindowFocus: false, 
-    refetchOnReconnect: false, 
-  });
-
-  const user = profileData?.data;
-  const imageUrls = profileData?.image_url;
-
-  const [editProfile, setEditProfile] = useState({
-    first_name: "",
-    phone: "",
-    email: "",
-    image: null,
-  });
-
-  const [passwordData, setPasswordData] = useState({
-    oldPassword: "",
+  const [formData, setFormData] = useState({
+    name: user?.name || "",
+    currentPassword: "",
     newPassword: "",
-    confirmPassword: "",
   });
 
-  useEffect(() => {
-    if (user) {
-      setEditProfile({
-        first_name: user.first_name || "",
-        phone: user.phone || "",
-        email: user.email || "",
-        image: null, 
-      });
-    }
-  }, [user]);
-
- 
-  const getUserImageUrl = () => {
-    const datenow = new Date().getTime(); 
-    if (!user?.image ) {
-      const noImageUrl = imageUrls?.find((img) => img.image_for === "No Image")?.image_url || "";
-      return noImageUrl;
-    }
-    const userImageUrl = `${imageUrls?.find((img) => img.image_for === "User")?.image_url}${user.image}`;
-    return `${userImageUrl}?t=${datenow}`;
-  };
-  
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setEditProfile((prev) => ({ ...prev, image: file }));
-    }
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (formData) => {
-      const response = await axios.post(`${BASE_URL}/api/update-profile`, formData, {
+  const handleSubmit = async () => {
+    const missingFields = [];
+    if (!formData.name) missingFields.push("Name");
+    if (!formData.currentPassword) missingFields.push("Current Password");
+    if (!formData.newPassword) missingFields.push("New Password");
+
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in: ${missingFields.join(", ")}`);
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters long");
+      return;
+    }
+
+    try {
+      const formDataObj = {
+        username: formData.name,
+        old_password: formData.currentPassword,
+        new_password: formData.newPassword,
+      };
+
+      const res = await trigger({
+        url: CHANGE_PASSWORD_API.create,
+        method: "post",
+        data: formDataObj,
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
         },
       });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      toast.success(data.message || "Profile updated successfully!");
-      queryClient.invalidateQueries(["profile"]);
-    },
-    onError: (error) => {
-      toast.error(error.response.data.message || "Failed to update profile");
-      console.error("Update profile error:", error);
-    },
-  });
 
-  const handleProfileUpdate = (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append("first_name", editProfile.first_name);
-    formData.append("phone", editProfile.phone);
-    formData.append("email", editProfile.email);
-    if (editProfile.image) {
-      formData.append("image", editProfile.image);
-    }
-    updateProfileMutation.mutate(formData);
-  };
+      if (res?.code === 200) {
+        toast.success(res?.msg || "Password updated successfully");
 
-  const changePasswordMutation = useMutation({
-    mutationFn: async (passwordData) => {
-      const response = await axios.post(
-        `${BASE_URL}/api/panel-change-password`,
-        {
-          old_password: passwordData.oldPassword,
-          password: passwordData.newPassword,
-          confirm_password: passwordData.confirmPassword,
-          username: user?.name,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      return response.data;
-    },
-    onSuccess: (data) => {
-      if (data.code === 201) {
-        toast.success(data.message || "Password updated successfully!");
-        setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+        setFormData((prev) => ({
+          ...prev,
+          currentPassword: "",
+          newPassword: "",
+        }));
       } else {
-        toast.error(data.message  || "Unexpected error occurred");
+        toast.error(res?.msg || "Failed to update password");
       }
-    },
-    onError: (error) => {
-      toast.error(error.response.data.message || "Please enter valid old password");
-    },
-  });
-
-  const handlePasswordChange = (e) => {
-    e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Passwords don't match");
-      return;
+    } catch (error) {
+      toast.error(error?.response?.data?.msg || "Something went wrong");
     }
-    if (passwordData.oldPassword === passwordData.newPassword) {
-      toast.error("Same Old Password is not allowed");
-      return;
-    }
-    changePasswordMutation.mutate(passwordData);
   };
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center p-8">Loading...</div>;
-  }
 
   return (
-    <div className="p-2 max-w-6xl mx-auto ">
-    
+    <div className="p-2  mx-auto ">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          Settings
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          Manage your account preferences
+        </p>
+      </div>
 
-      <Tabs defaultValue="profile" className="w-full mt-2">
-        <TabsList className="grid w-full grid-cols-2 mb-2">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="doc">HelpDesk</TabsTrigger>
-       
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+            Appearance
+          </h3>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+              Theme Color
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              {["default", "yellow", "green", "purple", "teal", "gray"].map(
+                (color) => {
+                  const colorsMap = {
+                    default: "bg-green-900",
+                    yellow: "bg-yellow-500",
+                    green: "bg-green-600",
+                    purple: "bg-purple-600",
+                    teal: "bg-teal-600",
+                    gray: "bg-gray-600",
+                  };
+                  const isActive = theme === color;
+                  return (
+                    <button
+                      key={color}
+                      onClick={() => setTheme(color)}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200
+                                            ${colorsMap[color]} 
+                                            ${
+                                              isActive
+                                                ? "shadow-lg ring-2 ring-offset-2 ring-primary scale-110"
+                                                : "opacity-80 hover:opacity-100 hover:scale-105"
+                                            }`}
+                      title={`Set ${color} theme`}
+                    >
+                      {isActive && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-4 h-4 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                }
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+              Current theme:{" "}
+              <span className="font-medium capitalize">{theme}</span>
+            </p>
+          </div>
+        </div>
 
-        <TabsContent value="profile" className="space-y-2">
-        <ProfileSetting
-    user={user}
-    editProfile={editProfile}
-    setEditProfile={setEditProfile}
-    handleProfileUpdate={handleProfileUpdate}
-    passwordData={passwordData}
-    setPasswordData={setPasswordData}
-    handlePasswordChange={handlePasswordChange}
-    updateProfileMutation={updateProfileMutation}
-    changePasswordMutation={changePasswordMutation}
-    fileInputRef={fileInputRef}
-    handleImageChange={handleImageChange}
-    getUserImageUrl={getUserImageUrl}
-    
-  />
-        </TabsContent>
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+            Account
+          </h3>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div>
+              <div>
+                <h4 className="text-md font-medium text-gray-800 dark:text-gray-200 flex  flex-row items-center  justify-between ">
+                  <span>Change Password</span>
 
-        <TabsContent value="doc">
-         <DocSetting/>
-        </TabsContent>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Must be at least 6 characters long
+                  </span>
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    {/* <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Current Password
+                                        </Label> */}
+                    <Input
+                      id="currentPassword"
+                      name="currentPassword"
+                      value={formData.currentPassword}
+                      onChange={handleInputChange}
+                      placeholder="Enter current password"
+                      type="password"
+                      maxLength={16}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    {/* <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            New Password
+                                        </Label> */}
+                    <Input
+                      id="newPassword"
+                      name="newPassword"
+                      value={formData.newPassword}
+                      onChange={handleInputChange}
+                      placeholder="Enter new password (min 6 characters)"
+                      type="password"
+                      maxLength={16}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
 
-      
-      </Tabs>
+              <Button
+                onClick={handleSubmit}
+                disabled={
+                  isSubmitting ||
+                  !formData.currentPassword ||
+                  !formData.newPassword
+                }
+                className="w-full mt-1"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Password"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      
+      <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Logged in as
+            </p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {user?.name || "User"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Account Type
+            </p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+              {user?.role || "User"}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
