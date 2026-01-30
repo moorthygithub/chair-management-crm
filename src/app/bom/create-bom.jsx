@@ -1,5 +1,4 @@
-import { GroupButton } from "@/components/group-button";
-import ImageUpload from "@/components/image-upload/image-upload";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,228 +8,370 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { COMPANY_API } from "@/constants/apiConstants";
-import { useApiMutation } from "@/hooks/useApiMutation";
-import { getImageBaseUrl } from "@/utils/imageUtils";
-import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-const initialState = {
-  student_company_name: "",
-  student_company_image_alt: "",
-  student_company_status: "Active",
-  student_company_image: null,
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import LoadingBar from "@/components/loader/loading-bar";
+import { useGetApiMutation } from "@/hooks/useGetApiMutation";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { BOM_API, COMPONENTS_API, PRODUCT_API } from "@/constants/apiConstants";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+const initialSub = {
+  id: "",
+  bom_sub_component_id: "",
+  bom_sub_qnty: "",
 };
-const CompanyDialog = ({ open, onClose, companyId }) => {
-  const isEdit = Boolean(companyId);
-  const queryClient = useQueryClient();
-  const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState(initialState);
-  const { trigger: fetchCompany } = useApiMutation();
-  const { trigger, loading } = useApiMutation();
 
-  const [preview, setPreview] = useState({
-    student_company_image: "",
+const initialState = {
+  bom_product_id: "",
+  subs: [initialSub],
+};
+
+const BomDialog = ({ open, onClose, bomId }) => {
+  const isEditMode = Boolean(bomId);
+  const queryClient = useQueryClient();
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [formData, setFormData] = useState(initialState);
+  const [errors, setErrors] = useState({});
+
+  const { data: productData, isLoading: loadingProduct } = useGetApiMutation({
+    url: PRODUCT_API.active,
+    queryKey: ["product-active"],
   });
 
+  const { data: componentData, isLoading: loadingComponent } =
+    useGetApiMutation({
+      url: COMPONENTS_API.active,
+      queryKey: ["component-active"],
+    });
+
+  const { trigger: submitBom, loading: saving } = useApiMutation();
+  const { trigger: fetchBom, loading: fetching } = useApiMutation();
+  const { trigger: deleteSub, loading: deleting } = useApiMutation();
+
+  const fetchBomDetails = async () => {
+    try {
+      const res = await fetchBom({
+        url: BOM_API.byId(bomId),
+      });
+
+      const apiData = res?.data;
+
+      setFormData({
+        bom_product_id: String(apiData.bom_product_id),
+        subs:
+          apiData.subs?.length > 0
+            ? apiData.subs.map((s) => ({
+                id: s.id,
+                bom_sub_component_id: String(s.bom_sub_component_id),
+                bom_sub_qnty: String(s.bom_sub_qnty),
+              }))
+            : [initialSub],
+      });
+    } catch {
+      toast.error("Failed to load BOM details");
+    }
+  };
+
   useEffect(() => {
-    if (!open) return;
-    if (!isEdit) {
+    if (isEditMode && open) {
+      fetchBomDetails();
+    } else if (!isEditMode && open) {
       setFormData(initialState);
       setErrors({});
-      return;
     }
-    const fetchData = async () => {
-      try {
-        const res = await fetchCompany({
-          url: COMPANY_API.byId(companyId),
-        });
-        const data = res.data;
-        setFormData({
-          student_company_name: data.student_company_name,
-          student_company_image_alt: data.student_company_image_alt,
-          student_company_status: data.student_company_status,
-          student_company_image: null,
-        });
-        const IMAGE_FOR = "Student Company";
-        const baseUrl = getImageBaseUrl(res?.image_url, IMAGE_FOR);
-
-        setPreview({
-          student_company_image: `${baseUrl}${data.student_company_image}`,
-        });
-      } catch (err) {
-        toast.error(err.message || "Failed to load country data");
-      }
-    };
-    fetchData();
-  }, [open, companyId]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((p) => ({ ...p, [name]: value }));
-    setErrors((p) => ({ ...p, [name]: "" }));
-  };
+  }, [bomId, open]);
 
   const validate = () => {
     const err = {};
-    if (!formData.student_company_name) err.student_company_name = "Required";
-    if (!formData.student_company_image_alt)
-      err.student_company_image_alt = "Required";
-    if (!preview.student_company_image) err.student_company_image = "Required";
+
+    if (!formData.bom_product_id) err.bom_product_id = "Required";
+
+    const subErrors = formData.subs.map((s) => {
+      const e = {};
+      if (!s.bom_sub_component_id) e.bom_sub_component_id = "Required";
+      if (!s.bom_sub_qnty) e.bom_sub_qnty = "Required";
+      return e;
+    });
+
+    if (subErrors.some((e) => Object.keys(e).length > 0)) {
+      err.subs = subErrors;
+    }
 
     setErrors(err);
     return Object.keys(err).length === 0;
   };
 
+  const handleAddSub = () => {
+    setFormData((p) => ({
+      ...p,
+      subs: [...p.subs, { ...initialSub }],
+    }));
+  };
+  const handleRemoveSub = (index) => {
+    const updated = [...formData.subs];
+    updated.splice(index, 1);
+    setFormData((p) => ({ ...p, subs: updated }));
+  };
+
+  const handleRemoveSubClick = (index) => {
+    const sub = formData.subs[index];
+    if (sub.id) {
+      setDeleteIndex(index);
+      setDeleteId(sub.id);
+      setDeleteDialogOpen(true);
+    } else {
+      handleRemoveSub(index);
+    }
+  };
+
+  const handleConfirmDeleteSub = async () => {
+    if (!deleteId) return;
+
+    try {
+      const res = await deleteSub({
+        url: BOM_API.deleteSubById(deleteId),
+        method: "delete",
+        data: {},
+      });
+      if (res?.code === 201) {
+        toast.success(res?.message || "Sub-component deleted");
+        handleRemoveSub(deleteIndex);
+      } else {
+        toast.error(res?.message || "Failed to delete sub-component");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong");
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeleteId(null);
+      setDeleteIndex(null);
+    }
+  };
+  const handleSubChange = (index, field, value) => {
+    const updated = [...formData.subs];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData((p) => ({ ...p, subs: updated }));
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
 
-    const formDataObj = new FormData();
-
-    formDataObj.append("student_company_name", formData.student_company_name);
-    formDataObj.append(
-      "student_company_image_alt",
-      formData.student_company_image_alt
-    );
-    formDataObj.append(
-      "student_company_status",
-      formData.student_company_status
-    );
-
-    if (formData.student_company_image instanceof File) {
-      formDataObj.append(
-        "student_company_image",
-        formData.student_company_image
-      );
-    }
     try {
-      const res = await trigger({
-        url: isEdit ? COMPANY_API.updateById(companyId) : COMPANY_API.create,
-        method: "post",
-        data: formDataObj,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      const res = await submitBom({
+        url: isEditMode ? BOM_API.updateById(bomId) : BOM_API.list,
+        method: isEditMode ? "put" : "post",
+        data: formData,
       });
-
-      if (res?.code === 200 || res?.code === 201) {
-        toast.success(res.msg);
-        queryClient.invalidateQueries(["company-list"]);
-        queryClient.invalidateQueries(["companies-dropdown"]);
+      if (res?.code === 201) {
+        toast.success(res?.message || "BOM saved successfully");
+        queryClient.invalidateQueries({ queryKey: ["bom-list"] });
         onClose();
       } else {
-        toast.error(res?.msg || "Failed");
+        toast.error(res?.message || "Failed to save component");
       }
-    } catch (error) {
-      const errors = error?.response?.data?.msg;
-      toast.error(errors || "Something went wrong");
-    }
-  };
-  const handleImageChange = (fieldName, file) => {
-    if (file) {
-      setFormData({ ...formData, [fieldName]: file });
-      const url = URL.createObjectURL(file);
-      setPreview({ ...preview, [fieldName]: url });
-      setErrors({ ...errors, [fieldName]: "" });
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong");
     }
   };
 
-  const handleRemoveImage = (fieldName) => {
-    setFormData({ ...formData, [fieldName]: null });
-    setPreview({ ...preview, [fieldName]: "" });
-  };
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl" aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? "Edit Company" : "Create Company"}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        {(loadingProduct || loadingComponent || fetching) && <LoadingBar />}
 
-        <div className="grid grid-cols-1  gap-4">
-          <div>
-            <Label>Company Name *</Label>
-            <Input
-              name="student_company_name"
-              value={formData.student_company_name}
-              onChange={handleChange}
-            />
-            <div className="flex justify-between">
-              {errors.student_company_name && (
-                <p className="text-sm text-red-500">
-                  {errors.student_company_name}
-                </p>
-              )}
+        <DialogContent
+          className="max-w-3xl p-0 overflow-hidden"
+          aria-describedby={undefined}
+        >
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle>{isEditMode ? "Edit BOM" : "Create BOM"}</DialogTitle>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[55vh] px-6 py-4">
+            <div className="space-y-6">
+              <div className="mx-1">
+                <Label>BOM Product *</Label>
+                <Select
+                  value={formData.bom_product_id}
+                  onValueChange={(v) =>
+                    setFormData({ ...formData, bom_product_id: v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productData?.data?.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.product_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.bom_product_id && (
+                  <p className="text-sm text-red-500">
+                    {errors.bom_product_id}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label>Sub Components *</Label>
+                  <Button variant="outline" size="sm" onClick={handleAddSub}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add More
+                  </Button>
+                </div>
+
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>Component *</TableHead>
+                        <TableHead>Quantity *</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                      {formData.subs.map((sub, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Select
+                              value={sub.bom_sub_component_id}
+                              onValueChange={(v) =>
+                                handleSubChange(
+                                  index,
+                                  "bom_sub_component_id",
+                                  v,
+                                )
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Component" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {componentData?.data?.map((c) => (
+                                  <SelectItem key={c.id} value={String(c.id)}>
+                                    {c.component_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {errors?.subs?.[index]?.bom_sub_component_id && (
+                              <p className="text-xs text-red-500 mt-1">
+                                Required
+                              </p>
+                            )}
+                          </TableCell>
+
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={sub.bom_sub_qnty}
+                              onChange={(e) =>
+                                handleSubChange(
+                                  index,
+                                  "bom_sub_qnty",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                            {errors?.subs?.[index]?.bom_sub_qnty && (
+                              <p className="text-xs text-red-500 mt-1">
+                                Required
+                              </p>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveSubClick(index)}
+                              disabled={formData.subs.length <= 1}
+                            >
+                              {sub.id ? (
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              ) : (
+                                <Minus className="w-4 h-4 text-red-500" />
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
 
-          <div>
-            <Label>Image Alt *</Label>
-            <Textarea
-              name="student_company_image_alt"
-              value={formData.student_company_image_alt}
-              onChange={handleChange}
-            />
-            <div className="flex justify-between">
-              {errors.student_company_image_alt && (
-                <p className="text-sm text-red-500">
-                  {errors.student_company_image_alt}
-                </p>
-              )}
-            </div>
+          <div className="px-6 py-4 border-t flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save BOM
+            </Button>
           </div>
-
-          <div>
-            <ImageUpload
-              id="student_company_image"
-              label="Company Image"
-              previewImage={preview.student_company_image}
-              onFileChange={(e) =>
-                handleImageChange("student_company_image", e.target.files?.[0])
-              }
-              onRemove={() => handleRemoveImage("student_company_image")}
-              error={errors.student_company_image}
-              format="WEBP"
-              maxSize={5}
-              allowedExtensions={["webp"]}
-              requiredDimensions={[150, 150]}
-            />
-          </div>
-          {isEdit && (
-            <div>
-              <Label>Status</Label>
-              <GroupButton
-                value={formData.student_company_status}
-                onChange={(v) =>
-                  setFormData((p) => ({
-                    ...p,
-                    student_company_status: v,
-                  }))
-                }
-                options={[
-                  { label: "Active", value: "Active" },
-                  { label: "Inactive", value: "Inactive" },
-                ]}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEdit ? "Update" : "Create"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">
+              Delete Sub Component
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this sub-component? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteSub}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? "Deleting" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
-export default CompanyDialog;
+export default BomDialog;

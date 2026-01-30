@@ -12,8 +12,10 @@ export const PANEL_CHECK = {
 };
 export const BOM_API = {
   list: "/bom",
+  deleteSubById: (id) => `/bom-sub/${id}`,
   byId: (id) => `/bom/${id}`,
   updateById: (id) => `/bom/${id}`,
+  deleteById: (id) => `/bom/${id}`,
   updateStatus: (id) => `/boms/${id}/status`,
 };
 export const PRODUCT_API = {
