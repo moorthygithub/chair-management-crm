@@ -19,7 +19,6 @@ const VersionCheck = () => {
   const Logout = useAppLogout();
   const [retryPopup, setRetryPopup] = useState(false);
   const isDialogOpen = useSelector((state) => state.version.showUpdateDialog);
-  console.log(isDialogOpen, "isDialogOpen");
   const serverVersion = useSelector((state) => state?.version?.version);
   const handleCloseDialog = () => {
     dispatch(

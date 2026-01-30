@@ -1,11 +1,13 @@
-product_code;
-product_name;
-required;
+// component_code
+// component_name--required
 
-product_category;
-required;
+// component_category--required
 
-product_rate;
-required;
+// component_unit--required
 
-product_description;
+// component_mini_stock--required -number
+
+// component_rate--required -number
+
+// component_specification
+// component_brand

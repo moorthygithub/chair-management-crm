@@ -23,6 +23,13 @@ export const PRODUCT_API = {
   updateById: (id) => `/product/${id}`,
   updateStatus: (id) => `/products/${id}/status`,
 };
+export const COMPONENTS_API = {
+  list: "/component",
+  active: "/activeComponents",
+  byId: (id) => `/component/${id}`,
+  updateById: (id) => `/component/${id}`,
+  updateStatus: (id) => `/components/${id}/status`,
+};
 export const SIDE_POPUP_API = {
   list: "/side-popup",
   byId: (id) => `/side-popup/${id}`,

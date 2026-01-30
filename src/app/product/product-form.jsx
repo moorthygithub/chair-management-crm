@@ -90,10 +90,8 @@ const ProductForm = ({ isOpen, onClose, productId }) => {
       });
 
       if (res?.code == 201) {
-        console.log(res, "res");
         toast.success(res?.message || "Saved successfully");
         onClose();
-
         queryClient.invalidateQueries({ queryKey: ["product-list"] });
       } else {
         toast.error(res?.message || "Failed to update product");

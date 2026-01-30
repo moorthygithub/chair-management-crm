@@ -11,24 +11,15 @@ import {
 import {
   AudioWaveform,
   Blocks,
-  BookOpen,
-  Building2,
   Command,
-  Frame,
   GalleryVerticalEnd,
-  Globe,
-  HelpCircle,
-  Image,
   LayoutGrid,
-  Mail,
   Settings,
   Settings2,
-  Users,
-  Youtube,
+  Users
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
-import { NavMainReport } from "./nav-main-report";
 
 const NAVIGATION_CONFIG = {
   COMMON: {
@@ -45,7 +36,7 @@ const NAVIGATION_CONFIG = {
       items: [
         {
           title: "Component",
-          url: "/student-testimonial",
+          url: "/component",
           icon: Users,
         },
         {
@@ -189,3 +180,4 @@ export function AppSidebar({ ...props }) {
 }
 
 export { NAVIGATION_CONFIG, USER_ROLE_PERMISSIONS };
+

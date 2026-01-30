@@ -31,7 +31,6 @@ export function NavUser({ user }) {
   const serverVersion = useSelector((state) => state?.version?.version);
   const sidebar = useSelector((state) => state?.ui?.sidebarOpen);
   const showDialog = localVersion !== serverVersion ? true : false;
-  console.log(showDialog, "showDialog");
   const dispatch = useDispatch();
   const handleOpenDialog = () => {
     dispatch(
