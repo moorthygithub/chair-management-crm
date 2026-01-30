@@ -11,32 +11,22 @@ import {
 import {
   AudioWaveform,
   Blocks,
-  BookOpen,
-  Building2,
   Command,
-  Frame,
   GalleryVerticalEnd,
-  Globe,
-  HelpCircle,
-  Image,
   LayoutGrid,
-  Mail,
   Settings,
   Settings2,
-  Users,
-  Youtube,
+  Users
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
-import { NavMainReport } from "./nav-main-report";
 
 const NAVIGATION_CONFIG = {
   COMMON: {
     BOM: {
       title: "BOM",
-      url: "/popup-list",
+      url: "/bom",
       icon: LayoutGrid,
-      isActive: false,
     },
 
     MASTER: {
@@ -46,62 +36,43 @@ const NAVIGATION_CONFIG = {
       items: [
         {
           title: "Component",
-          url: "/student-testimonial",
+          url: "/component",
           icon: Users,
         },
         {
           title: "Product",
-          url: "/student-youtube",
+          url: "/product",
           icon: Users,
         },
       ],
     },
-  },
 
-  REPORTS: {
     SETTINGS: {
       title: "Settings",
       url: "/settings",
       icon: Blocks,
-      isActive: false,
     },
   },
 };
 
 const USER_ROLE_PERMISSIONS = {
   1: {
-    navMain: [
-      "BOM",
-      "MASTER",
-      // "SETTINGS",
-    ],
+    navMain: ["BOM", "MASTER", "SETTINGS"],
     navMainReport: ["BOM", "MASTER", "SETTINGS"],
   },
 
   2: {
-    navMain: [
-      "BOM",
-      "MASTER",
-      // "SETTINGS",
-    ],
+    navMain: ["BOM", "MASTER", "SETTINGS"],
     navMainReport: ["BOM", "MASTER", "SETTINGS"],
   },
 
   3: {
-    navMain: [
-      "BOM",
-      "MASTER",
-      // "SETTINGS",
-    ],
+    navMain: ["BOM", "MASTER", "SETTINGS"],
     navMainReport: ["BOM", "MASTER", "SETTINGS"],
   },
 
   4: {
-    navMain: [
-      "BOM",
-      "MASTER",
-      // "SETTINGS",
-    ],
+    navMain: ["BOM", "MASTER", "SETTINGS"],
     navMainReport: ["BOM", "MASTER", "SETTINGS"],
   },
 };
@@ -209,3 +180,4 @@ export function AppSidebar({ ...props }) {
 }
 
 export { NAVIGATION_CONFIG, USER_ROLE_PERMISSIONS };
+

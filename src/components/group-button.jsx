@@ -1,34 +1,35 @@
-import React from "react";
+"use client";
+
+import * as React from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function GroupButton({ options = [], value, onChange, className }) {
   return (
     <div
-      className={cn(
-        "relative inline-flex items-center rounded-xl bg-gradient-to-b from-muted/80 to-muted p-1.5 shadow-inner gap-1",
-        className
-      )}
       role="group"
+      className={cn("inline-flex rounded-md border bg-background", className)}
     >
-      {options.map((option) => {
+      {options.map((option, index) => {
         const isActive = value === option.value;
+        const Icon = option.icon;
 
         return (
-          <button
+          <Button
             key={option.value}
             type="button"
+            variant={isActive ? "default" : "outline"}
             onClick={() => onChange(option.value)}
             className={cn(
-              "relative px-5 py-2 border rounded-lg text-sm  font-medium  transition-all duration-300",
-              "transform active:scale-95",
-              isActive
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02] border-primary"
-                : "bg-white text-foreground hover:shadow-md border-border"
+              "rounded-none gap-2",
+              index === 0 && "rounded-l-md",
+              index === options.length - 1 && "rounded-r-md",
+              isActive && "bg-primary text-primary-foreground",
             )}
-            aria-pressed={isActive}
           >
-            <span className="relative z-10">{option.label}</span>
-          </button>
+            {Icon && <Icon className="h-4 w-4" />}
+            {option.label}
+          </Button>
         );
       })}
     </div>
